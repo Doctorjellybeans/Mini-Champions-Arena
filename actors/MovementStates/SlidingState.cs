@@ -24,17 +24,6 @@ public class SlidingState : MovementState
         float heightDiff = (_originalCapsuleHeight - _config.SlideCapsuleHeight) / 2f;
         capsule.Height = _config.SlideCapsuleHeight;
         shape.Position = _originalShapePosition with { Y = _originalShapePosition.Y - heightDiff };
-
-        // Impulso inicial en la dirección horizontal actual
-        Vector3 velocity = _player.Velocity;
-        float hSpeed = new Vector2(velocity.X, velocity.Z).Length();
-        if (hSpeed > 0f)
-        {
-            float boosted = hSpeed + _config.SlideEntryBoost;
-            velocity.X = velocity.X / hSpeed * boosted;
-            velocity.Z = velocity.Z / hSpeed * boosted;
-            _player.Velocity = velocity;
-        }
     }
 
     public override void Exit()
