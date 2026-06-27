@@ -1,0 +1,7 @@
+# Godot 4+ specific ignores
+.godot/
+/android/
+
+# Local secrets and machine-specific config
+.mcp.json
+.claude/settings.local.json
