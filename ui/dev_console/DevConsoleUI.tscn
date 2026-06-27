@@ -1,27 +1,25 @@
 [gd_scene load_steps=3 format=3 uid="uid://dconsoleuisc1"]
 
-[ext_resource type="Script" path="res://ui/dev_console/DevConsoleUI.cs" id="Script_devconsoleui"]
+[ext_resource type="Script" uid="uid://cg4ggjbynu84g" path="res://ui/dev_console/DevConsoleUI.cs" id="Script_devconsoleui"]
 
 [sub_resource type="StyleBoxFlat" id="StyleBoxFlat_console"]
 bg_color = Color(0.05, 0.05, 0.08, 0.92)
 
 [node name="DevConsoleUI" type="CanvasLayer"]
-layer = 10
 process_mode = 3
+layer = 10
 script = ExtResource("Script_devconsoleui")
 
 [node name="ConsolePanel" type="Panel" parent="."]
-layout_mode = 1
-anchor_left = 0.0
-anchor_top = 0.0
+anchors_preset = -1
 anchor_right = 1.0
 anchor_bottom = 0.55
 grow_horizontal = 2
-grow_vertical = 1
 theme_override_styles/panel = SubResource("StyleBoxFlat_console")
 
 [node name="VBoxContainer" type="VBoxContainer" parent="ConsolePanel"]
 layout_mode = 1
+anchors_preset = 15
 anchor_right = 1.0
 anchor_bottom = 1.0
 grow_horizontal = 2
@@ -31,11 +29,11 @@ theme_override_constants/separation = 4
 [node name="Output" type="RichTextLabel" parent="ConsolePanel/VBoxContainer"]
 layout_mode = 2
 size_flags_vertical = 3
+focus_mode = 2
 bbcode_enabled = true
+text = "[color=#aaaaaa]Araya-Champions DevConsole: type a command and press Enter[/color]"
 scroll_following = true
 selection_enabled = true
-context_menu_enabled = false
-text = "[color=#aaaaaa]Araya-Champions DevConsole — type a command and press Enter[/color]"
 
 [node name="HSeparator" type="HSeparator" parent="ConsolePanel/VBoxContainer"]
 layout_mode = 2
@@ -52,4 +50,3 @@ text = ">"
 [node name="Input" type="LineEdit" parent="ConsolePanel/VBoxContainer/InputRow"]
 layout_mode = 2
 size_flags_horizontal = 3
-clear_button_enabled = false
