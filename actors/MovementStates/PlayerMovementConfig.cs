@@ -1,33 +1,18 @@
 using Godot;
 
-// Perfil de parámetros de movimiento. Como Resource puede guardarse en archivos .tres
-// para tener distintos "perfiles" (p. ej. caminar normal, sprint, etc.) en el futuro.
+// Contenedor de parámetros de movimiento. Debe seguir siendo un Resource de Godot
+// para que el motor no pierda la referencia de clase al recompilar.
+// Los valores reales vienen de los [Export] del nodo Player (ver Player.cs).
 [GlobalClass]
 public partial class PlayerMovementConfig : Resource
 {
-    // Velocidad de caminata en suelo (reemplaza a la antigua Speed)
-    [Export] public float WalkSpeed = 5f;
+    public float WalkSpeed;
+    public float JumpVelocity;
+    public float MouseSensitivity;
 
-    // Impulso vertical al saltar
-    [Export] public float JumpVelocity = 4.5f;
-
-    // Sensibilidad del mouse para el look (radianes por pixel)
-    [Export] public float MouseSensitivity = 0.003f;
-
-    // --- Parámetros de slide ---
-
-    // Velocidad horizontal mínima para poder iniciar un slide
-    [Export] public float SlideMinEntrySpeed = 3f;
-
-    // Impulso de velocidad horizontal al entrar al slide (se suma a la velocidad actual)
-    [Export] public float SlideEntryBoost = 3f;
-
-    // Velocidad horizontal mínima para mantener el slide activo
-    [Export] public float SlideMinExitSpeed = 1f;
-
-    // Deceleración horizontal durante el slide (m/s²)
-    [Export] public float SlideFrictionDeceleration = 6f;
-
-    // Altura de la cápsula durante el slide (Godot default = 2.0)
-    [Export] public float SlideCapsuleHeight = 1.0f;
+    public float SlideMinEntrySpeed;
+    public float SlideEntryBoost;
+    public float SlideMinExitSpeed;
+    public float SlideFrictionDeceleration;
+    public float SlideCapsuleHeight;
 }

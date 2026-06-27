@@ -1,6 +1,6 @@
 [gd_scene load_steps=3 format=3 uid="uid://br7rbvow6ikfc"]
 
-[ext_resource type="Script" path="res://actors/Player.cs" id="Script_player"]
+[ext_resource type="Script" uid="uid://x1kp8qhdrhhr" path="res://actors/Player.cs" id="Script_player"]
 
 [sub_resource type="CapsuleShape3D" id="CapsuleShape3D_u8vuu"]
 
@@ -8,6 +8,7 @@
 
 [node name="CharacterBody3D" type="CharacterBody3D" parent="."]
 script = ExtResource("Script_player")
+SlideEntryBoost = 4.0
 
 [node name="CollisionShape3D" type="CollisionShape3D" parent="CharacterBody3D"]
 shape = SubResource("CapsuleShape3D_u8vuu")

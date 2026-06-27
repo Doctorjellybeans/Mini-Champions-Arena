@@ -2,9 +2,19 @@ using Godot;
 
 public partial class Player : CharacterBody3D
 {
-    // Perfil de movimiento. Si no se asigna un .tres en el inspector, se crea uno
-    // con los valores por defecto (comportamiento idéntico al anterior).
-    [Export] public PlayerMovementConfig Config;
+    [ExportGroup("Movement")]
+    [Export] public float WalkSpeed = 5f;
+    [Export] public float JumpVelocity = 4.5f;
+    [Export] public float MouseSensitivity = 0.003f;
+
+    [ExportGroup("Slide")]
+    [Export] public float SlideMinEntrySpeed = 3f;
+    [Export] public float SlideEntryBoost = 3f;
+    [Export] public float SlideMinExitSpeed = 1f;
+    [Export] public float SlideFrictionDeceleration = 6f;
+    [Export] public float SlideCapsuleHeight = 1.0f;
+
+    private PlayerMovementConfig Config;
 
     private const float NoclipSpeed = 15f;
 
@@ -43,8 +53,18 @@ public partial class Player : CharacterBody3D
         _originalCapsuleHeight = ((CapsuleShape3D)_collisionShape.Shape).Height;
         _originalShapeLocalY = _collisionShape.Position.Y;
 
-        // Garantiza un config válido aunque no se haya asignado en la escena
-        Config ??= new PlayerMovementConfig();
+        // Construye el config a partir de los campos exportados del inspector
+        Config = new PlayerMovementConfig
+        {
+            WalkSpeed             = WalkSpeed,
+            JumpVelocity          = JumpVelocity,
+            MouseSensitivity      = MouseSensitivity,
+            SlideMinEntrySpeed    = SlideMinEntrySpeed,
+            SlideEntryBoost       = SlideEntryBoost,
+            SlideMinExitSpeed     = SlideMinExitSpeed,
+            SlideFrictionDeceleration = SlideFrictionDeceleration,
+            SlideCapsuleHeight    = SlideCapsuleHeight,
+        };
 
         // Instancia los estados de movimiento
         _grounded = new GroundedState(this, Config, _gravity);
