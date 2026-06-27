@@ -1,0 +1,62 @@
+[gd_scene load_steps=10 format=3 uid="uid://8t76nja1uv3t"]
+
+[ext_resource type="PackedScene" uid="uid://dpausemenu123" path="res://ui/PauseMenu.tscn" id="PackedScene_pausemenu"]
+[ext_resource type="PackedScene" uid="uid://br7rbvow6ikfc" path="res://actors/player.tscn" id="PackedScene_player"]
+
+[sub_resource type="PlaneMesh" id="PlaneMesh_y1cfv"]
+
+[sub_resource type="ConcavePolygonShape3D" id="ConcavePolygonShape3D_y1cfv"]
+data = PackedVector3Array(1, 0, 1, -1, 0, 1, 1, 0, -1, -1, 0, 1, -1, 0, -1, 1, 0, -1)
+
+[sub_resource type="ProceduralSkyMaterial" id="ProceduralSkyMaterial_sky"]
+sky_top_color = Color(0.3, 0.6, 1, 1)
+sky_horizon_color = Color(0.65, 0.85, 1, 1)
+ground_bottom_color = Color(0.2, 0.17, 0.13, 1)
+ground_horizon_color = Color(0.65, 0.85, 1, 1)
+
+[sub_resource type="Sky" id="Sky_oqqkv"]
+sky_material = SubResource("ProceduralSkyMaterial_sky")
+
+[sub_resource type="Environment" id="Environment_4fvrs"]
+background_mode = 2
+sky = SubResource("Sky_oqqkv")
+ambient_light_source = 3
+reflected_light_source = 2
+
+[sub_resource type="SphereMesh" id="SphereMesh_oqqkv"]
+
+[sub_resource type="SphereShape3D" id="SphereShape3D_4fvrs"]
+
+[node name="World" type="Node3D"]
+
+[node name="Player" parent="." instance=ExtResource("PackedScene_player")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1, 0)
+
+[node name="Floor" type="MeshInstance3D" parent="."]
+transform = Transform3D(10, 0, 0, 0, 10, 0, 0, 0, 10, 0, 0, 0)
+mesh = SubResource("PlaneMesh_y1cfv")
+
+[node name="StaticBody3D" type="StaticBody3D" parent="Floor"]
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="Floor/StaticBody3D"]
+shape = SubResource("ConcavePolygonShape3D_y1cfv")
+
+[node name="Sun" type="DirectionalLight3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 0.74522, 0.6668187, 0, -0.6668187, 0.74522, 0, 12.913249, 11.480705)
+
+[node name="WorldEnvironment" type="WorldEnvironment" parent="."]
+environment = SubResource("Environment_4fvrs")
+
+[node name="Ball" type="RigidBody3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 9.068077, -1.731474)
+
+[node name="MeshInstance3D" type="MeshInstance3D" parent="Ball"]
+mesh = SubResource("SphereMesh_oqqkv")
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="Ball"]
+shape = SubResource("SphereShape3D_4fvrs")
+
+[node name="UILayer" type="CanvasLayer" parent="."]
+layer = 5
+
+[node name="PauseMenu" parent="UILayer" instance=ExtResource("PackedScene_pausemenu")]
