@@ -64,10 +64,10 @@ public partial class Player : CharacterBody3D
         // Bloquea movimiento mientras la consola está abierta (el mundo sigue corriendo)
         if (_console?.IsOpen == true)
         {
-            if (!IsOnFloor())
-                velocity.Y -= _gravity * (float)delta;
-            velocity.X = Mathf.MoveToward(velocity.X, 0, Speed);
-            velocity.Z = Mathf.MoveToward(velocity.Z, 0, Speed);
+            velocity.X = 0f;
+            velocity.Z = 0f;
+            // En noclip CollisionMask=0 → IsOnFloor() siempre es false → no acumular gravedad
+            velocity.Y = (_isNoclip || IsOnFloor()) ? 0f : velocity.Y - _gravity * (float)delta;
             Velocity = velocity;
             MoveAndSlide();
             return;
@@ -78,7 +78,7 @@ public partial class Player : CharacterBody3D
         {
             Vector3 dir = Vector3.Zero;
             Vector2 inp = Input.GetVector("move_left", "move_right", "move_forward", "move_back");
-            dir += -_head.GlobalTransform.Basis.Z * inp.Y;
+            dir += _head.GlobalTransform.Basis.Z * inp.Y;
             dir += _head.GlobalTransform.Basis.X * inp.X;
             if (Input.IsKeyPressed(Key.E)) dir += Vector3.Up;
             if (Input.IsKeyPressed(Key.Q)) dir -= Vector3.Up;
