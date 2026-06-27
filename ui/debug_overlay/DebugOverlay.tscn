@@ -1,0 +1,70 @@
+[gd_scene load_steps=4 format=3 uid="uid://1bdi52li4nje"]
+
+[ext_resource type="Script" uid="uid://yjvytn8h3m2p" path="res://ui/debug_overlay/AxisGizmo.cs" id="Script_axisgizmo"]
+[ext_resource type="Script" uid="uid://b70wonxh0c2nn" path="res://ui/debug_overlay/DebugOverlay.cs" id="Script_debugoverlay"]
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_overlay"]
+bg_color = Color(0, 0, 0, 0.65)
+corner_radius_top_left = 4
+corner_radius_top_right = 4
+corner_radius_bottom_right = 4
+corner_radius_bottom_left = 4
+
+[node name="DebugOverlay" type="CanvasLayer"]
+process_mode = 3
+layer = 15
+script = ExtResource("Script_debugoverlay")
+
+[node name="OverlayPanel" type="Panel" parent="."]
+offset_right = 240.0
+offset_bottom = 175.0
+theme_override_styles/panel = SubResource("StyleBoxFlat_overlay")
+
+[node name="MarginContainer" type="MarginContainer" parent="OverlayPanel"]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+theme_override_constants/margin_left = 8
+theme_override_constants/margin_top = 6
+theme_override_constants/margin_right = 8
+theme_override_constants/margin_bottom = 6
+
+[node name="VBoxContainer" type="VBoxContainer" parent="OverlayPanel/MarginContainer"]
+layout_mode = 2
+
+[node name="LabelFPS" type="Label" parent="OverlayPanel/MarginContainer/VBoxContainer"]
+layout_mode = 2
+text = "FPS: --"
+
+[node name="LabelSpeed" type="Label" parent="OverlayPanel/MarginContainer/VBoxContainer"]
+layout_mode = 2
+text = "Speed: -- m/s"
+
+[node name="LabelVelX" type="Label" parent="OverlayPanel/MarginContainer/VBoxContainer"]
+layout_mode = 2
+text = "Vel X: -- m/s"
+
+[node name="LabelVelY" type="Label" parent="OverlayPanel/MarginContainer/VBoxContainer"]
+layout_mode = 2
+text = "Vel Y: -- m/s"
+
+[node name="LabelVelZ" type="Label" parent="OverlayPanel/MarginContainer/VBoxContainer"]
+layout_mode = 2
+text = "Vel Z: -- m/s"
+
+[node name="LabelPos" type="Label" parent="OverlayPanel/MarginContainer/VBoxContainer"]
+layout_mode = 2
+text = "Pos: (--, --, --)"
+
+[node name="AxisGizmo" type="Control" parent="."]
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+script = ExtResource("Script_axisgizmo")
