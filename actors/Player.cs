@@ -2,9 +2,9 @@ using Godot;
 
 public partial class Player : CharacterBody3D
 {
-    [Export] public float Speed = 5f;
-    [Export] public float JumpVelocity = 4.5f;
-    [Export] public float MouseSensitivity = 0.003f;
+    // Perfil de movimiento. Si no se asigna un .tres en el inspector, se crea uno
+    // con los valores por defecto (comportamiento idéntico al anterior).
+    [Export] public PlayerMovementConfig Config;
 
     private const float NoclipSpeed = 15f;
 
@@ -19,6 +19,16 @@ public partial class Player : CharacterBody3D
     private DevConsole _console;
     private DebugOverlay _debugOverlay;
 
+    // Máquina de estados de movimiento
+    private MovementState _grounded;
+    private MovementState _airborne;
+    private MovementState _sliding;
+    private MovementState _currentState;
+
+    private CollisionShape3D _collisionShape;
+    private float _originalCapsuleHeight;
+    private float _originalShapeLocalY;
+
     public bool IsNoclip => _isNoclip;
 
     public override void _Ready()
@@ -27,6 +37,21 @@ public partial class Player : CharacterBody3D
         _head = GetNode<Node3D>("CollisionShape3D/Head");
         _savedCollisionLayer = CollisionLayer;
         _savedCollisionMask  = CollisionMask;
+
+        // Cachea forma de colisión y valores originales antes de cualquier slide
+        _collisionShape = GetNode<CollisionShape3D>("CollisionShape3D");
+        _originalCapsuleHeight = ((CapsuleShape3D)_collisionShape.Shape).Height;
+        _originalShapeLocalY = _collisionShape.Position.Y;
+
+        // Garantiza un config válido aunque no se haya asignado en la escena
+        Config ??= new PlayerMovementConfig();
+
+        // Instancia los estados de movimiento
+        _grounded = new GroundedState(this, Config, _gravity);
+        _airborne = new AirborneState(this, Config, _gravity);
+        _sliding  = new SlidingState(this, Config, _gravity);
+        _currentState = IsOnFloor() ? _grounded : _airborne;
+        _currentState.Enter();
 
         Input.MouseMode = Input.MouseModeEnum.Captured;
 
@@ -49,8 +74,8 @@ public partial class Player : CharacterBody3D
 
         if (@event is InputEventMouseMotion mouseMotion)
         {
-            RotateY(-mouseMotion.Relative.X * MouseSensitivity);
-            _head.RotateX(-mouseMotion.Relative.Y * MouseSensitivity);
+            RotateY(-mouseMotion.Relative.X * Config.MouseSensitivity);
+            _head.RotateX(-mouseMotion.Relative.Y * Config.MouseSensitivity);
             Vector3 rot = _head.Rotation;
             rot.X = Mathf.Clamp(rot.X, -_pitchLimit, _pitchLimit);
             _head.Rotation = rot;
@@ -59,56 +84,115 @@ public partial class Player : CharacterBody3D
 
     public override void _PhysicsProcess(double delta)
     {
-        Vector3 velocity = Velocity;
-
-        // Bloquea movimiento mientras la consola está abierta (el mundo sigue corriendo)
-        if (_console?.IsOpen == true)
-        {
-            velocity.X = 0f;
-            velocity.Z = 0f;
-            // En noclip CollisionMask=0 → IsOnFloor() siempre es false → no acumular gravedad
-            velocity.Y = (_isNoclip || IsOnFloor()) ? 0f : velocity.Y - _gravity * (float)delta;
-            Velocity = velocity;
-            MoveAndSlide();
-            return;
-        }
-
-        // Modo noclip: movimiento libre en 6DOF, sin gravedad ni colisión
+        // Modo noclip: override total, la máquina de estados no corre.
+        // (Maneja también el caso consola-abierta para conservar el orden previo.)
         if (_isNoclip)
         {
-            Vector3 dir = Vector3.Zero;
-            Vector2 inp = Input.GetVector("move_left", "move_right", "move_forward", "move_back");
-            dir += _head.GlobalTransform.Basis.Z * inp.Y;
-            dir += _head.GlobalTransform.Basis.X * inp.X;
-            if (Input.IsKeyPressed(Key.E)) dir += Vector3.Up;
-            if (Input.IsKeyPressed(Key.Q)) dir -= Vector3.Up;
-            Velocity = dir == Vector3.Zero ? Vector3.Zero : dir.Normalized() * NoclipSpeed;
+            UpdateNoclip(delta);
+            return;
+        }
+
+        // Movimiento normal delegado a la máquina de estados.
+        // Con la consola abierta el input se bloquea pero igual se llama MoveAndSlide
+        // (preserva el fix de glitch de velocidad).
+        bool inputLocked = _console?.IsOpen == true;
+        UpdateCurrentState(inputLocked);
+        _currentState.PhysicsUpdate(delta, inputLocked);
+    }
+
+    // Gestiona todas las transiciones de estado, incluyendo entrada y salida del slide
+    private void UpdateCurrentState(bool inputLocked)
+    {
+        if (_currentState == _sliding)
+        {
+            bool jumpPressed = !inputLocked && Input.IsActionJustPressed("jump");
+            bool slideHeld   = !inputLocked && Input.IsActionPressed("slide");
+            float hSpeed     = new Vector2(Velocity.X, Velocity.Z).Length();
+
+            // Salto desde slide: conserva velocidad horizontal, transiciona a airborne
+            if (jumpPressed)
+            {
+                Vector3 vel = Velocity;
+                vel.Y = Config.JumpVelocity;
+                Velocity = vel;
+                _currentState.Exit();
+                _currentState = _airborne;
+                _currentState.Enter();
+                return;
+            }
+
+            // Salida normal: tecla suelta, velocidad baja, o cayó por un borde
+            if (!IsOnFloor() || !slideHeld || hSpeed < Config.SlideMinExitSpeed)
+            {
+                // No salir si un techo impide restaurar la cápsula (excepto si está en el aire)
+                if (!IsOnFloor() || CanStandUp())
+                {
+                    _currentState.Exit();
+                    _currentState = IsOnFloor() ? _grounded : _airborne;
+                    _currentState.Enter();
+                }
+            }
+            return;
+        }
+
+        // Transición normal grounded ↔ airborne
+        MovementState desired = IsOnFloor() ? _grounded : _airborne;
+        if (desired != _currentState)
+        {
+            _currentState.Exit();
+            _currentState = desired;
+            _currentState.Enter();
+        }
+
+        // Intentar entrar al slide (solo desde grounded, sin noclip, sin console)
+        if (!inputLocked && _currentState == _grounded && !_isNoclip)
+        {
+            if (Input.IsActionJustPressed("slide"))
+            {
+                float hSpeed = new Vector2(Velocity.X, Velocity.Z).Length();
+                if (hSpeed >= Config.SlideMinEntrySpeed)
+                {
+                    _currentState.Exit();
+                    _currentState = _sliding;
+                    _currentState.Enter();
+                }
+            }
+        }
+    }
+
+    // Raycast hacia arriba para verificar si hay espacio suficiente para salir del slide
+    private bool CanStandUp()
+    {
+        float slideTop    = _collisionShape.Position.Y + Config.SlideCapsuleHeight / 2f;
+        float originalTop = _originalShapeLocalY + _originalCapsuleHeight / 2f;
+        float checkDist   = originalTop - slideTop;
+        if (checkDist <= 0f) return true;
+
+        var spaceState = GetWorld3D().DirectSpaceState;
+        Vector3 from = GlobalPosition + new Vector3(0f, slideTop, 0f);
+        var query = PhysicsRayQueryParameters3D.Create(from, from + Vector3.Up * checkDist, CollisionMask);
+        query.Exclude = new Godot.Collections.Array<Rid> { GetRid() };
+        return spaceState.IntersectRay(query).Count == 0;
+    }
+
+    // Movimiento libre en 6DOF, sin gravedad ni colisión.
+    // Si la consola está abierta queda congelado (mismo comportamiento que antes).
+    private void UpdateNoclip(double delta)
+    {
+        if (_console?.IsOpen == true)
+        {
+            Velocity = Vector3.Zero;
             MoveAndSlide();
             return;
         }
 
-        // Movimiento normal
-        if (!IsOnFloor())
-            velocity.Y -= _gravity * (float)delta;
-
-        if (Input.IsActionJustPressed("jump") && IsOnFloor())
-            velocity.Y = JumpVelocity;
-
-        Vector2 inputDir = Input.GetVector("move_left", "move_right", "move_forward", "move_back");
-        Vector3 direction = (Transform.Basis * new Vector3(inputDir.X, 0, inputDir.Y)).Normalized();
-
-        if (direction != Vector3.Zero)
-        {
-            velocity.X = direction.X * Speed;
-            velocity.Z = direction.Z * Speed;
-        }
-        else
-        {
-            velocity.X = Mathf.MoveToward(velocity.X, 0, Speed);
-            velocity.Z = Mathf.MoveToward(velocity.Z, 0, Speed);
-        }
-
-        Velocity = velocity;
+        Vector3 dir = Vector3.Zero;
+        Vector2 inp = Input.GetVector("move_left", "move_right", "move_forward", "move_back");
+        dir += _head.GlobalTransform.Basis.Z * inp.Y;
+        dir += _head.GlobalTransform.Basis.X * inp.X;
+        if (Input.IsKeyPressed(Key.E)) dir += Vector3.Up;
+        if (Input.IsKeyPressed(Key.Q)) dir -= Vector3.Up;
+        Velocity = dir == Vector3.Zero ? Vector3.Zero : dir.Normalized() * NoclipSpeed;
         MoveAndSlide();
     }
 
