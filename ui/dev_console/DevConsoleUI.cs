@@ -15,15 +15,17 @@ public partial class DevConsoleUI : CanvasLayer
 
         _console = GetNode<DevConsole>("/root/DevConsole");
         _console.Output += AppendOutput;
-        _input.TextSubmitted += OnSubmit;
-
+        _console.ClearOutput += () => _output.Clear();
         _panel.Visible = false;
     }
 
-    public override void _UnhandledInput(InputEvent @event)
+    // _Input fires before LineEdit processes key events, so we can intercept keys that
+    // LineEdit would otherwise consume (open_console toggle, Ctrl+C, Enter).
+    public override void _Input(InputEvent @event)
     {
-        if (@event is not InputEventKey { Pressed: true }) return;
+        if (@event is not InputEventKey { Pressed: true } key) return;
 
+        // Toggle console — intercept before LineEdit types the character into the field
         if (@event.IsActionPressed("open_console"))
         {
             ToggleConsole();
@@ -31,7 +33,30 @@ public partial class DevConsoleUI : CanvasLayer
             return;
         }
 
-        if (_panel.Visible && @event is InputEventKey { Keycode: Key.Escape })
+        if (!_panel.Visible) return;
+
+        // Close on Ctrl+C — LineEdit would consume this as "copy"
+        if (key.CtrlPressed && key.Keycode == Key.C)
+        {
+            ToggleConsole();
+            GetViewport().SetInputAsHandled();
+            return;
+        }
+
+        // Submit on Enter — intercept so LineEdit never releases focus
+        if (key.Keycode is Key.Enter or Key.KpEnter)
+        {
+            string text = _input.Text.Trim();
+            _input.Clear();
+            if (!string.IsNullOrEmpty(text))
+                _console.ExecuteCommand(text);
+            GetViewport().SetInputAsHandled();
+        }
+    }
+
+    public override void _UnhandledInput(InputEvent @event)
+    {
+        if (_panel.Visible && @event is InputEventKey { Pressed: true, Keycode: Key.Escape })
         {
             ToggleConsole();
             GetViewport().SetInputAsHandled();
@@ -55,15 +80,9 @@ public partial class DevConsoleUI : CanvasLayer
         }
     }
 
-    private void OnSubmit(string text)
-    {
-        _console.ExecuteCommand(text);
-        _input.Clear();
-        _input.GrabFocus();
-    }
-
     private void AppendOutput(string msg)
     {
-        _output.AppendText(msg + "\n");
+        if (!string.IsNullOrEmpty(msg))
+            _output.AppendText(msg + "\n");
     }
 }
