@@ -27,14 +27,18 @@ public abstract class MovementState
     // está abierta: en ese caso no se lee input nuevo, pero igual se llama MoveAndSlide.
     public abstract void PhysicsUpdate(double delta, bool inputLocked);
 
-    // Movimiento horizontal compartido. Con inputLocked fuerza X/Z a 0 sin leer input
-    // (replica el congelado de la consola); sin bloqueo aplica WASD con deceleración suave.
-    protected void ApplyHorizontalMovement(ref Vector3 velocity, bool inputLocked)
+    // Movimiento horizontal con aceleración suave. targetSpeed es la velocidad máxima deseada
+    // (WalkSpeed o SprintSpeed); acceleration controla cuánto puede cambiar por segundo.
+    // Con inputLocked desacelera a 0 en lugar de frenar instantáneo.
+    protected void ApplyHorizontalMovement(ref Vector3 velocity, double delta, bool inputLocked,
+                                            float targetSpeed, float acceleration)
     {
+        float step = acceleration * (float)delta;
+
         if (inputLocked)
         {
-            velocity.X = 0f;
-            velocity.Z = 0f;
+            velocity.X = Mathf.MoveToward(velocity.X, 0f, step);
+            velocity.Z = Mathf.MoveToward(velocity.Z, 0f, step);
             return;
         }
 
@@ -43,13 +47,13 @@ public abstract class MovementState
 
         if (direction != Vector3.Zero)
         {
-            velocity.X = direction.X * _config.WalkSpeed;
-            velocity.Z = direction.Z * _config.WalkSpeed;
+            velocity.X = Mathf.MoveToward(velocity.X, direction.X * targetSpeed, step);
+            velocity.Z = Mathf.MoveToward(velocity.Z, direction.Z * targetSpeed, step);
         }
         else
         {
-            velocity.X = Mathf.MoveToward(velocity.X, 0, _config.WalkSpeed);
-            velocity.Z = Mathf.MoveToward(velocity.Z, 0, _config.WalkSpeed);
+            velocity.X = Mathf.MoveToward(velocity.X, 0f, step);
+            velocity.Z = Mathf.MoveToward(velocity.Z, 0f, step);
         }
     }
 }

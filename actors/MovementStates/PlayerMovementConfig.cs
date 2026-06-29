@@ -15,4 +15,9 @@ public partial class PlayerMovementConfig : Resource
     public float SlideMinExitSpeed;
     public float SlideFrictionDeceleration;
     public float SlideCapsuleHeight;
+
+    public float SprintSpeed;
+    public float GroundAcceleration;
+    public float AirAcceleration;
+    public float AirSpeedCap;
 }

@@ -4,11 +4,17 @@ public partial class Player : CharacterBody3D
 {
     [ExportGroup("Movement")]
     [Export] public float WalkSpeed = 5f;
+    [Export] public float SprintSpeed = 9f;
+    [Export] public float GroundAcceleration = 60f;
     [Export] public float JumpVelocity = 4.5f;
     [Export] public float MouseSensitivity = 0.003f;
 
+    [ExportGroup("Air")]
+    [Export] public float AirAcceleration = 30f;
+    [Export] public float AirSpeedCap = 1.5f;
+
     [ExportGroup("Slide")]
-    [Export] public float SlideMinEntrySpeed = 3f;
+    [Export] public float SlideMinEntrySpeed = 4.5f;
     [Export] public float SlideEntryBoost = 3f;
     [Export] public float SlideMinExitSpeed = 1f;
     [Export] public float SlideFrictionDeceleration = 6f;
@@ -39,6 +45,11 @@ public partial class Player : CharacterBody3D
     private float _originalCapsuleHeight;
     private float _originalShapeLocalY;
 
+    // Buffer de input para slide: permite iniciar el slide al aterrizar si Ctrl
+    // fue presionado en el aire (cubre tanto el caso en vuelo como el encadenamiento
+    // slide → salto → mantener Ctrl → aterrizar).
+    private bool _slideBuffered;
+
     public bool IsNoclip => _isNoclip;
 
     public override void _Ready()
@@ -57,8 +68,12 @@ public partial class Player : CharacterBody3D
         Config = new PlayerMovementConfig
         {
             WalkSpeed             = WalkSpeed,
+            SprintSpeed           = SprintSpeed,
+            GroundAcceleration    = GroundAcceleration,
             JumpVelocity          = JumpVelocity,
             MouseSensitivity      = MouseSensitivity,
+            AirAcceleration       = AirAcceleration,
+            AirSpeedCap           = AirSpeedCap,
             SlideMinEntrySpeed    = SlideMinEntrySpeed,
             SlideEntryBoost       = SlideEntryBoost,
             SlideMinExitSpeed     = SlideMinExitSpeed,
@@ -123,6 +138,13 @@ public partial class Player : CharacterBody3D
     // Gestiona todas las transiciones de estado, incluyendo entrada y salida del slide
     private void UpdateCurrentState(bool inputLocked)
     {
+        // Gestión del buffer de slide: se activa al presionar la tecla (en cualquier estado)
+        // y se limpia al soltarla o cuando el input está bloqueado.
+        if (!inputLocked && Input.IsActionJustPressed("slide"))
+            _slideBuffered = true;
+        if (inputLocked || !Input.IsActionPressed("slide"))
+            _slideBuffered = false;
+
         if (_currentState == _sliding)
         {
             bool jumpPressed = !inputLocked && Input.IsActionJustPressed("jump");
@@ -167,11 +189,12 @@ public partial class Player : CharacterBody3D
         // Intentar entrar al slide (solo desde grounded, sin noclip, sin console)
         if (!inputLocked && _currentState == _grounded && !_isNoclip)
         {
-            if (Input.IsActionJustPressed("slide"))
+            if (_slideBuffered)
             {
                 float hSpeed = new Vector2(Velocity.X, Velocity.Z).Length();
                 if (hSpeed >= Config.SlideMinEntrySpeed)
                 {
+                    _slideBuffered = false;
                     _currentState.Exit();
                     _currentState = _sliding;
                     _currentState.Enter();

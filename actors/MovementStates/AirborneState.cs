@@ -1,7 +1,8 @@
 using Godot;
 
 // Estado de movimiento en el aire (IsOnFloor() == false).
-// Aplica gravedad y comparte el control horizontal con GroundedState. Sin salto.
+// Aplica gravedad y air-strafing estilo Quake: el input añade velocidad en la dirección deseada
+// limitado por AirSpeedCap, sin tocar la velocidad horizontal preexistente (slide, sprint, etc).
 public class AirborneState : MovementState
 {
     public AirborneState(Player player, PlayerMovementConfig config, float gravity)
@@ -11,10 +12,32 @@ public class AirborneState : MovementState
     {
         Vector3 velocity = _player.Velocity;
 
-        // Gravedad: se acumula mientras se está en el aire
         velocity.Y -= _gravity * (float)delta;
 
-        ApplyHorizontalMovement(ref velocity, inputLocked);
+        if (!inputLocked)
+        {
+            Vector2 inputDir = Input.GetVector("move_left", "move_right", "move_forward", "move_back");
+            Vector3 wishDir = (_player.Transform.Basis * new Vector3(inputDir.X, 0, inputDir.Y)).Normalized();
+
+            if (wishDir != Vector3.Zero)
+            {
+                // Quake air-strafing: solo se añade velocidad en wishDir si la proyección
+                // actual en esa dirección está por debajo de AirSpeedCap.
+                // La velocidad heredada (slide/sprint) no se recorta — el cap aplica solo al
+                // control nuevo que el input puede agregar por frame.
+                float currentDot = new Vector3(velocity.X, 0f, velocity.Z).Dot(wishDir);
+                float addSpeed = _config.AirSpeedCap - currentDot;
+
+                if (addSpeed > 0f)
+                {
+                    float accelSpeed = _config.AirAcceleration * _config.AirSpeedCap * (float)delta;
+                    accelSpeed = Mathf.Min(accelSpeed, addSpeed);
+                    velocity.X += accelSpeed * wishDir.X;
+                    velocity.Z += accelSpeed * wishDir.Z;
+                }
+            }
+            // Sin input no hay fricción: la velocidad horizontal se conserva sin cambios.
+        }
 
         _player.Velocity = velocity;
         _player.MoveAndSlide();
