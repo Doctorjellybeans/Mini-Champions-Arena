@@ -1,4 +1,4 @@
-[gd_scene load_steps=10 format=3 uid="uid://8t76nja1uv3t"]
+[gd_scene load_steps=13 format=3 uid="uid://8t76nja1uv3t"]
 
 [ext_resource type="PackedScene" uid="uid://dpausemenu123" path="res://ui/PauseMenu.tscn" id="PackedScene_pausemenu"]
 [ext_resource type="PackedScene" uid="uid://br7rbvow6ikfc" path="res://actors/player.tscn" id="PackedScene_player"]
@@ -27,13 +27,19 @@ reflected_light_source = 2
 
 [sub_resource type="SphereShape3D" id="SphereShape3D_4fvrs"]
 
+[sub_resource type="BoxMesh" id="BoxMesh_y5bbl"]
+
+[sub_resource type="BoxShape3D" id="BoxShape3D_psuqq"]
+
+[sub_resource type="BoxShape3D" id="BoxShape3D_mxujq"]
+
 [node name="World" type="Node3D"]
 
 [node name="Player" parent="." instance=ExtResource("PackedScene_player")]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1, 0)
 
 [node name="Floor" type="MeshInstance3D" parent="."]
-transform = Transform3D(10, 0, 0, 0, 10, 0, 0, 0, 10, 0, 0, 0)
+transform = Transform3D(50, 0, 0, 0, 10, 0, 0, 0, 50, 0, 0, 0)
 mesh = SubResource("PlaneMesh_y1cfv")
 
 [node name="StaticBody3D" type="StaticBody3D" parent="Floor"]
@@ -60,3 +66,21 @@ shape = SubResource("SphereShape3D_4fvrs")
 layer = 5
 
 [node name="PauseMenu" parent="UILayer" instance=ExtResource("PackedScene_pausemenu")]
+
+[node name="MeshInstance3D" type="MeshInstance3D" parent="."]
+transform = Transform3D(-7.858954e-07, -5.1396737, 0.91079086, 17.981932, -2.246965e-07, 0, 1.37178535e-08, 0.08971333, 52.17918, 6, 2.5, -69.157)
+mesh = SubResource("BoxMesh_y5bbl")
+
+[node name="StaticBody3D" type="StaticBody3D" parent="MeshInstance3D"]
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="MeshInstance3D/StaticBody3D"]
+shape = SubResource("BoxShape3D_psuqq")
+
+[node name="MeshInstance3D2" type="MeshInstance3D" parent="."]
+transform = Transform3D(-7.00493e-07, 4.8429065, 0.974379, -16.027853, -2.1172242e-07, 0, 1.2227148e-08, -0.08453322, 55.822147, -6, 3.1963139, -71.632)
+mesh = SubResource("BoxMesh_y5bbl")
+
+[node name="StaticBody3D" type="StaticBody3D" parent="MeshInstance3D2"]
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="MeshInstance3D2/StaticBody3D"]
+shape = SubResource("BoxShape3D_mxujq")
