@@ -3,11 +3,6 @@
 [ext_resource type="PackedScene" uid="uid://dpausemenu123" path="res://ui/PauseMenu.tscn" id="PackedScene_pausemenu"]
 [ext_resource type="PackedScene" uid="uid://br7rbvow6ikfc" path="res://actors/player.tscn" id="PackedScene_player"]
 
-[sub_resource type="PlaneMesh" id="PlaneMesh_y1cfv"]
-
-[sub_resource type="ConcavePolygonShape3D" id="ConcavePolygonShape3D_y1cfv"]
-data = PackedVector3Array(1, 0, 1, -1, 0, 1, 1, 0, -1, -1, 0, 1, -1, 0, -1, 1, 0, -1)
-
 [sub_resource type="ProceduralSkyMaterial" id="ProceduralSkyMaterial_sky"]
 sky_top_color = Color(0.3, 0.6, 1, 1)
 sky_horizon_color = Color(0.65, 0.85, 1, 1)
@@ -23,29 +18,31 @@ sky = SubResource("Sky_oqqkv")
 ambient_light_source = 3
 reflected_light_source = 2
 
-[sub_resource type="SphereMesh" id="SphereMesh_oqqkv"]
+[sub_resource type="StandardMaterial3D" id="Mat_sprint"]
+albedo_color = Color(0.55, 0.55, 0.6, 1)
 
-[sub_resource type="SphereShape3D" id="SphereShape3D_4fvrs"]
+[sub_resource type="StandardMaterial3D" id="Mat_marker"]
+albedo_color = Color(0.9, 0.9, 0.2, 1)
 
-[sub_resource type="BoxMesh" id="BoxMesh_y5bbl"]
+[sub_resource type="StandardMaterial3D" id="Mat_slide"]
+albedo_color = Color(0.3, 0.6, 0.35, 1)
 
-[sub_resource type="BoxShape3D" id="BoxShape3D_psuqq"]
+[sub_resource type="StandardMaterial3D" id="Mat_wallrun"]
+albedo_color = Color(0.25, 0.35, 0.7, 1)
 
-[sub_resource type="BoxShape3D" id="BoxShape3D_mxujq"]
+[sub_resource type="StandardMaterial3D" id="Mat_doublejump"]
+albedo_color = Color(0.75, 0.5, 0.15, 1)
+
+[sub_resource type="StandardMaterial3D" id="Mat_mantle"]
+albedo_color = Color(0.7, 0.25, 0.25, 1)
+
+[sub_resource type="StandardMaterial3D" id="Mat_combo"]
+albedo_color = Color(0.5, 0.25, 0.7, 1)
 
 [node name="World" type="Node3D"]
 
 [node name="Player" parent="." instance=ExtResource("PackedScene_player")]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1, 0)
-
-[node name="Floor" type="MeshInstance3D" parent="."]
-transform = Transform3D(50, 0, 0, 0, 10, 0, 0, 0, 50, 0, 0, 0)
-mesh = SubResource("PlaneMesh_y1cfv")
-
-[node name="StaticBody3D" type="StaticBody3D" parent="Floor"]
-
-[node name="CollisionShape3D" type="CollisionShape3D" parent="Floor/StaticBody3D"]
-shape = SubResource("ConcavePolygonShape3D_y1cfv")
 
 [node name="Sun" type="DirectionalLight3D" parent="."]
 transform = Transform3D(1, 0, 0, 0, 0.74522, 0.6668187, 0, -0.6668187, 0.74522, 0, 12.913249, 11.480705)
@@ -53,34 +50,202 @@ transform = Transform3D(1, 0, 0, 0, 0.74522, 0.6668187, 0, -0.6668187, 0.74522, 
 [node name="WorldEnvironment" type="WorldEnvironment" parent="."]
 environment = SubResource("Environment_4fvrs")
 
-[node name="Ball" type="RigidBody3D" parent="."]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 9.068077, -1.731474)
-
-[node name="MeshInstance3D" type="MeshInstance3D" parent="Ball"]
-mesh = SubResource("SphereMesh_oqqkv")
-
-[node name="CollisionShape3D" type="CollisionShape3D" parent="Ball"]
-shape = SubResource("SphereShape3D_4fvrs")
-
 [node name="UILayer" type="CanvasLayer" parent="."]
 layer = 5
 
 [node name="PauseMenu" parent="UILayer" instance=ExtResource("PackedScene_pausemenu")]
 
-[node name="MeshInstance3D" type="MeshInstance3D" parent="."]
-transform = Transform3D(-7.858954e-07, -5.1396737, 0.91079086, 17.981932, -2.246965e-07, 0, 1.37178535e-08, 0.08971333, 52.17918, 6, 2.5, -69.157)
-mesh = SubResource("BoxMesh_y5bbl")
+[node name="ZoneInfoLabel" type="Label3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 3, 2)
+billboard = 1
+text = "ZONAS — Araya Champions
+1. Sprint   tp 0 1 -2
+2. Slide    tp 0 1 -21
+3. WallRun  tp 0 1 -34
+4. DblJump  tp 0 1 -51
+5. Mantle   tp 0 1 -77
+6. Combo    tp 0 1 -95"
+font_size = 40
 
-[node name="StaticBody3D" type="StaticBody3D" parent="MeshInstance3D"]
+[node name="SprintZone" type="Node3D" parent="."]
 
-[node name="CollisionShape3D" type="CollisionShape3D" parent="MeshInstance3D/StaticBody3D"]
-shape = SubResource("BoxShape3D_psuqq")
+[node name="SprintFloor" type="CSGBox3D" parent="SprintZone"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, -0.5, -10)
+use_collision = true
+size = Vector3(6, 1, 20)
+material = SubResource("Mat_sprint")
 
-[node name="MeshInstance3D2" type="MeshInstance3D" parent="."]
-transform = Transform3D(-7.00493e-07, 4.8429065, 0.974379, -16.027853, -2.1172242e-07, 0, 1.2227148e-08, -0.08453322, 55.822147, -6, 3.1963139, -71.632)
-mesh = SubResource("BoxMesh_y5bbl")
+[node name="SprintMarker5m" type="CSGBox3D" parent="SprintZone"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.025, -5)
+size = Vector3(6.5, 0.05, 0.15)
+material = SubResource("Mat_marker")
 
-[node name="StaticBody3D" type="StaticBody3D" parent="MeshInstance3D2"]
+[node name="SprintMarker10m" type="CSGBox3D" parent="SprintZone"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.025, -10)
+size = Vector3(6.5, 0.05, 0.15)
+material = SubResource("Mat_marker")
 
-[node name="CollisionShape3D" type="CollisionShape3D" parent="MeshInstance3D2/StaticBody3D"]
-shape = SubResource("BoxShape3D_mxujq")
+[node name="SprintMarker15m" type="CSGBox3D" parent="SprintZone"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.025, -15)
+size = Vector3(6.5, 0.05, 0.15)
+material = SubResource("Mat_marker")
+
+[node name="SlideZone" type="Node3D" parent="."]
+
+[node name="SlideFloor1" type="CSGBox3D" parent="SlideZone"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, -0.5, -23)
+use_collision = true
+size = Vector3(6, 1, 6)
+material = SubResource("Mat_slide")
+
+[node name="SlideLowCeiling" type="CSGBox3D" parent="SlideZone"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.45, -23)
+use_collision = true
+size = Vector3(6.5, 0.3, 6)
+material = SubResource("Mat_slide")
+
+[node name="SlideRampDown" type="CSGBox3D" parent="SlideZone"]
+transform = Transform3D(1, 0, 0, 0, 0.9703, -0.2419, 0, -0.2419, -0.9703, 0, -0.4925, -26.94)
+use_collision = true
+size = Vector3(6, 0.5, 2.06)
+material = SubResource("Mat_slide")
+
+[node name="SlideValleyFloor" type="CSGBox3D" parent="SlideZone"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, -1, -28.75)
+use_collision = true
+size = Vector3(6, 1, 1.5)
+material = SubResource("Mat_slide")
+
+[node name="SlideRampUp" type="CSGBox3D" parent="SlideZone"]
+transform = Transform3D(1, 0, 0, 0, 0.9703, 0.2419, 0, 0.2419, -0.9703, 0, -0.4925, -30.56)
+use_collision = true
+size = Vector3(6, 0.5, 2.06)
+material = SubResource("Mat_slide")
+
+[node name="SlideFloor2" type="CSGBox3D" parent="SlideZone"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, -0.5, -32.25)
+use_collision = true
+size = Vector3(6, 1, 1.5)
+material = SubResource("Mat_slide")
+
+[node name="WallRunZone" type="Node3D" parent="."]
+
+[node name="WallRunFloor" type="CSGBox3D" parent="WallRunZone"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, -0.5, -41)
+use_collision = true
+size = Vector3(4, 1, 16)
+material = SubResource("Mat_wallrun")
+
+[node name="WallRunLeftA" type="CSGBox3D" parent="WallRunZone"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -2.25, 2.5, -40.99774)
+use_collision = true
+size = Vector3(0.5, 5, 15.995483)
+material = SubResource("Mat_wallrun")
+
+[node name="WallRunRight" type="CSGBox3D" parent="WallRunZone"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 2.25, 2.5, -41)
+use_collision = true
+size = Vector3(0.5, 5, 16)
+material = SubResource("Mat_wallrun")
+
+[node name="DoubleJumpZone" type="Node3D" parent="."]
+
+[node name="DJFloor" type="CSGBox3D" parent="DoubleJumpZone"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, -0.5, -62)
+use_collision = true
+size = Vector3(20, 1, 26)
+material = SubResource("Mat_doublejump")
+
+[node name="Platform2" type="CSGBox3D" parent="DoubleJumpZone"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.95, -57)
+use_collision = true
+size = Vector3(5, 0.5, 4)
+material = SubResource("Mat_doublejump")
+
+[node name="Platform3" type="CSGBox3D" parent="DoubleJumpZone"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 2.25, -68)
+use_collision = true
+size = Vector3(5, 0.5, 4)
+material = SubResource("Mat_doublejump")
+
+[node name="MantleZone" type="Node3D" parent="."]
+
+[node name="MantleFloor" type="CSGBox3D" parent="MantleZone"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, -0.5, -84)
+use_collision = true
+size = Vector3(10, 1, 18)
+material = SubResource("Mat_mantle")
+
+[node name="MantleWallA" type="CSGBox3D" parent="MantleZone"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.15, -79)
+use_collision = true
+size = Vector3(10, 0.3, 0.5)
+material = SubResource("Mat_mantle")
+
+[node name="MantleWallB" type="CSGBox3D" parent="MantleZone"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.5, -84)
+use_collision = true
+size = Vector3(10, 1, 0.5)
+material = SubResource("Mat_mantle")
+
+[node name="MantleWallC" type="CSGBox3D" parent="MantleZone"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.1, -89)
+use_collision = true
+size = Vector3(10, 2.2, 0.5)
+material = SubResource("Mat_mantle")
+
+[node name="ComboZone" type="Node3D" parent="."]
+
+[node name="ComboFloor" type="CSGBox3D" parent="ComboZone"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, -0.5, -146.16968)
+use_collision = true
+size = Vector3(25, 1, 106.339355)
+material = SubResource("Mat_combo")
+
+[node name="ComboWall1" type="CSGBox3D" parent="ComboZone"]
+transform = Transform3D(0.866, 0, 0.5, 0, 1, 0, -0.5, 0, 0.866, 6, 2.5, -100)
+use_collision = true
+size = Vector3(0.5, 5, 12)
+material = SubResource("Mat_combo")
+
+[node name="ComboWall2" type="CSGBox3D" parent="ComboZone"]
+transform = Transform3D(0.866, 0, -0.5, 0, 1, 0, 0.5, 0, 0.866, -6, 2.5, -110)
+use_collision = true
+size = Vector3(0.5, 5, 12)
+material = SubResource("Mat_combo")
+
+[node name="ComboWall3" type="CSGBox3D" parent="ComboZone"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -3, 1.75, -107)
+use_collision = true
+size = Vector3(6, 3.5, 0.5)
+material = SubResource("Mat_combo")
+
+[node name="ComboPlatformA" type="CSGBox3D" parent="ComboZone"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 3, 1.75, -103)
+use_collision = true
+size = Vector3(4, 0.5, 4)
+material = SubResource("Mat_combo")
+
+[node name="ComboPlatformB" type="CSGBox3D" parent="ComboZone"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -4, 0.65, -112)
+use_collision = true
+size = Vector3(4, 0.5, 4)
+material = SubResource("Mat_combo")
+
+[node name="ComboMantleWall" type="CSGBox3D" parent="ComboZone"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.75, -116)
+use_collision = true
+size = Vector3(8, 1.5, 0.5)
+material = SubResource("Mat_combo")
+
+[node name="WallRunLeftA" type="CSGBox3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -3.5052109, 5.2494326, -149.33711)
+use_collision = true
+size = Vector3(0.5, 10.856567, 46.462097)
+material = SubResource("Mat_wallrun")
+
+[node name="WallRunRight" type="CSGBox3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 3.462309, 5.34892, -148.55748)
+use_collision = true
+size = Vector3(0.5, 11.055542, 44.902832)
+material = SubResource("Mat_wallrun")
