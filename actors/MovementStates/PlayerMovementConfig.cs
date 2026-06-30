@@ -20,4 +20,15 @@ public partial class PlayerMovementConfig : Resource
     public float GroundAcceleration;
     public float AirAcceleration;
     public float AirSpeedCap;
+
+    public float WallRunSpeed;
+    public float WallRunGravity;
+    public float WallRunMaxDuration;
+    public float WallRunDetectionDistance;
+    public float WallRunMinEntrySpeed;
+    public float WallRunMaxNormalY;
+    public float WallRunSameWallThreshold;
+    public float WallRunCameraTilt;
+    public float WallJumpHorizontalForce;
+    public float WallJumpVerticalForce;
 }

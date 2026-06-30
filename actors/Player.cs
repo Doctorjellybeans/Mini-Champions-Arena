@@ -20,6 +20,18 @@ public partial class Player : CharacterBody3D
     [Export] public float SlideFrictionDeceleration = 6f;
     [Export] public float SlideCapsuleHeight = 1.0f;
 
+    [ExportGroup("WallRun")]
+    [Export] public float WallRunSpeed = 9f;
+    [Export] public float WallRunGravity = 2f;
+    [Export] public float WallRunMaxDuration = 1.5f;
+    [Export] public float WallRunDetectionDistance = 0.7f;
+    [Export] public float WallRunMinEntrySpeed = 3f;
+    [Export] public float WallRunMaxNormalY = 0.3f;
+    [Export] public float WallRunSameWallThreshold = 0.8f;
+    [Export] public float WallRunCameraTilt = 8f;
+    [Export] public float WallJumpHorizontalForce = 6f;
+    [Export] public float WallJumpVerticalForce = 5f;
+
     private PlayerMovementConfig Config;
 
     private const float NoclipSpeed = 15f;
@@ -39,7 +51,14 @@ public partial class Player : CharacterBody3D
     private MovementState _grounded;
     private MovementState _airborne;
     private MovementState _sliding;
+    private MovementState _wallRunning;
+    private WallRunningState _wallRunState;
     private MovementState _currentState;
+
+    // Normal de la última pared usada; reset al tocar suelo para permitir re-uso.
+    public Vector3 LastWallNormal;
+    // Disponibilidad de doble salto; reset a true al iniciar un wall-run (preparación Fase 4).
+    public bool _doubleJumpAvailable;
 
     private CollisionShape3D _collisionShape;
     private float _originalCapsuleHeight;
@@ -79,12 +98,24 @@ public partial class Player : CharacterBody3D
             SlideMinExitSpeed     = SlideMinExitSpeed,
             SlideFrictionDeceleration = SlideFrictionDeceleration,
             SlideCapsuleHeight    = SlideCapsuleHeight,
+            WallRunSpeed              = WallRunSpeed,
+            WallRunGravity            = WallRunGravity,
+            WallRunMaxDuration        = WallRunMaxDuration,
+            WallRunDetectionDistance  = WallRunDetectionDistance,
+            WallRunMinEntrySpeed      = WallRunMinEntrySpeed,
+            WallRunMaxNormalY         = WallRunMaxNormalY,
+            WallRunSameWallThreshold  = WallRunSameWallThreshold,
+            WallRunCameraTilt         = WallRunCameraTilt,
+            WallJumpHorizontalForce   = WallJumpHorizontalForce,
+            WallJumpVerticalForce     = WallJumpVerticalForce,
         };
 
         // Instancia los estados de movimiento
-        _grounded = new GroundedState(this, Config, _gravity);
-        _airborne = new AirborneState(this, Config, _gravity);
-        _sliding  = new SlidingState(this, Config, _gravity);
+        _grounded     = new GroundedState(this, Config, _gravity);
+        _airborne     = new AirborneState(this, Config, _gravity);
+        _sliding      = new SlidingState(this, Config, _gravity);
+        _wallRunState = new WallRunningState(this, Config, _gravity);
+        _wallRunning  = _wallRunState;
         _currentState = IsOnFloor() ? _grounded : _airborne;
         _currentState.Enter();
 
@@ -177,6 +208,40 @@ public partial class Player : CharacterBody3D
             return;
         }
 
+        if (_currentState == _wallRunning)
+        {
+            // Wall-jump: prioridad máxima
+            if (!inputLocked && Input.IsActionJustPressed("jump"))
+            {
+                _wallRunState.PerformWallJump();
+                LastWallNormal = _wallRunState.WallNormal;
+                _currentState.Exit();
+                _currentState = _airborne;
+                _currentState.Enter();
+                return;
+            }
+            // Tocó el suelo (geometría irregular)
+            if (IsOnFloor())
+            {
+                _currentState.Exit();
+                _currentState = _grounded;
+                _currentState.Enter();
+                return;
+            }
+            // Timer expirado, input bloqueado o pared perdida → caer sin wall-jump
+            Vector3 towardWall = new Vector3(-_wallRunState.WallNormal.X, 0f, -_wallRunState.WallNormal.Z).Normalized();
+            bool wallLost = !TryCastWallRay(towardWall, Config.WallRunDetectionDistance + 0.2f, out _);
+            if (inputLocked || _wallRunState.Timer >= Config.WallRunMaxDuration || wallLost)
+            {
+                LastWallNormal = _wallRunState.WallNormal;
+                _currentState.Exit();
+                _currentState = _airborne;
+                _currentState.Enter();
+                return;
+            }
+            return;
+        }
+
         // Transición normal grounded ↔ airborne
         MovementState desired = IsOnFloor() ? _grounded : _airborne;
         if (desired != _currentState)
@@ -184,6 +249,25 @@ public partial class Player : CharacterBody3D
             _currentState.Exit();
             _currentState = desired;
             _currentState.Enter();
+        }
+
+        // Intentar entrar al wall-run (solo desde airborne, con velocidad suficiente, sin noclip)
+        if (!inputLocked && _currentState == _airborne && !_isNoclip)
+        {
+            float hSpeed = new Vector2(Velocity.X, Velocity.Z).Length();
+            if (hSpeed >= Config.WallRunMinEntrySpeed)
+            {
+                Vector3 detected;
+                bool found = TryCastWallRay(-Transform.Basis.X, Config.WallRunDetectionDistance, out detected)
+                          || TryCastWallRay( Transform.Basis.X, Config.WallRunDetectionDistance, out detected);
+                if (found && detected.Dot(LastWallNormal) < Config.WallRunSameWallThreshold)
+                {
+                    _wallRunState.WallNormal = detected;
+                    _currentState.Exit();
+                    _currentState = _wallRunning;
+                    _currentState.Enter();
+                }
+            }
         }
 
         // Intentar entrar al slide (solo desde grounded, sin noclip, sin console)
@@ -201,6 +285,23 @@ public partial class Player : CharacterBody3D
                 }
             }
         }
+    }
+
+    // Raycast lateral para detectar paredes válidas (casi verticales).
+    private bool TryCastWallRay(Vector3 direction, float distance, out Vector3 wallNormal)
+    {
+        var spaceState = GetWorld3D().DirectSpaceState;
+        var query = PhysicsRayQueryParameters3D.Create(
+            GlobalPosition, GlobalPosition + direction * distance, CollisionMask);
+        query.Exclude = new Godot.Collections.Array<Rid> { GetRid() };
+        var result = spaceState.IntersectRay(query);
+        if (result.Count > 0)
+        {
+            wallNormal = result["normal"].AsVector3();
+            if (Mathf.Abs(wallNormal.Y) < Config.WallRunMaxNormalY) return true;
+        }
+        wallNormal = Vector3.Zero;
+        return false;
     }
 
     // Raycast hacia arriba para verificar si hay espacio suficiente para salir del slide

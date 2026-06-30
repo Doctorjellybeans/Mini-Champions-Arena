@@ -7,6 +7,11 @@ public class GroundedState : MovementState
     public GroundedState(Player player, PlayerMovementConfig config, float gravity)
         : base(player, config, gravity) { }
 
+    public override void Enter()
+    {
+        _player.LastWallNormal = Vector3.Zero;
+    }
+
     public override void PhysicsUpdate(double delta, bool inputLocked)
     {
         Vector3 velocity = _player.Velocity;
