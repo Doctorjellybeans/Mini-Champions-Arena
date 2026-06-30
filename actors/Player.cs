@@ -7,6 +7,7 @@ public partial class Player : CharacterBody3D
     [Export] public float SprintSpeed = 9f;
     [Export] public float GroundAcceleration = 60f;
     [Export] public float JumpVelocity = 4.5f;
+    [Export] public float DoubleJumpVelocity = 4.0f;
     [Export] public float MouseSensitivity = 0.003f;
 
     [ExportGroup("Air")]
@@ -31,6 +32,16 @@ public partial class Player : CharacterBody3D
     [Export] public float WallRunCameraTilt = 8f;
     [Export] public float WallJumpHorizontalForce = 6f;
     [Export] public float WallJumpVerticalForce = 5f;
+    [Export] public float WallRunMinFovDot = 0.1f;
+    [Export] public float WallRunFriction = 15f;
+
+    [ExportGroup("Mantle")]
+    [Export] public float MantleDetectionDistance = 0.8f;
+    [Export] public float MantleMinHeight = 0.1f;
+    [Export] public float MantleMaxHeight = 0.6f;
+    [Export] public float MantleMinEntrySpeed = 2f;
+    [Export] public float MantleDuration = 0.15f;
+    [Export] public float MantleExitBoost = 9f;
 
     private PlayerMovementConfig Config;
 
@@ -53,6 +64,8 @@ public partial class Player : CharacterBody3D
     private MovementState _sliding;
     private MovementState _wallRunning;
     private WallRunningState _wallRunState;
+    private MantlingState _mantleState;
+    private MovementState _mantling;
     private MovementState _currentState;
 
     // Normal de la última pared usada; reset al tocar suelo para permitir re-uso.
@@ -108,6 +121,15 @@ public partial class Player : CharacterBody3D
             WallRunCameraTilt         = WallRunCameraTilt,
             WallJumpHorizontalForce   = WallJumpHorizontalForce,
             WallJumpVerticalForce     = WallJumpVerticalForce,
+            WallRunMinFovDot          = WallRunMinFovDot,
+            WallRunFriction           = WallRunFriction,
+            DoubleJumpVelocity        = DoubleJumpVelocity,
+            MantleDetectionDistance   = MantleDetectionDistance,
+            MantleMinHeight           = MantleMinHeight,
+            MantleMaxHeight           = MantleMaxHeight,
+            MantleMinEntrySpeed       = MantleMinEntrySpeed,
+            MantleDuration            = MantleDuration,
+            MantleExitBoost           = MantleExitBoost,
         };
 
         // Instancia los estados de movimiento
@@ -116,6 +138,8 @@ public partial class Player : CharacterBody3D
         _sliding      = new SlidingState(this, Config, _gravity);
         _wallRunState = new WallRunningState(this, Config, _gravity);
         _wallRunning  = _wallRunState;
+        _mantleState  = new MantlingState(this, Config, _gravity);
+        _mantling     = _mantleState;
         _currentState = IsOnFloor() ? _grounded : _airborne;
         _currentState.Enter();
 
@@ -208,6 +232,18 @@ public partial class Player : CharacterBody3D
             return;
         }
 
+        if (_currentState == _mantling)
+        {
+            if (_mantleState.IsComplete)
+            {
+                Velocity = _mantleState.ExitVelocity;
+                _currentState.Exit();
+                _currentState = _grounded;
+                _currentState.Enter();
+            }
+            return;
+        }
+
         if (_currentState == _wallRunning)
         {
             // Wall-jump: prioridad máxima
@@ -239,6 +275,20 @@ public partial class Player : CharacterBody3D
                 _currentState.Enter();
                 return;
             }
+            // Cancelar si la cámara apunta lejos de la dirección de avance en la pared
+            {
+                Vector3 camFwd = -_head.GlobalTransform.Basis.Z;
+                Vector3 exitWallAlong = _wallRunState.WallNormal.Cross(Vector3.Up).Normalized();
+                if (camFwd.Dot(exitWallAlong) < 0f) exitWallAlong = -exitWallAlong;
+                if (camFwd.Dot(exitWallAlong) <= Config.WallRunMinFovDot)
+                {
+                    LastWallNormal = _wallRunState.WallNormal;
+                    _currentState.Exit();
+                    _currentState = _airborne;
+                    _currentState.Enter();
+                    return;
+                }
+            }
             return;
         }
 
@@ -262,10 +312,19 @@ public partial class Player : CharacterBody3D
                           || TryCastWallRay( Transform.Basis.X, Config.WallRunDetectionDistance, out detected);
                 if (found && detected.Dot(LastWallNormal) < Config.WallRunSameWallThreshold)
                 {
-                    _wallRunState.WallNormal = detected;
-                    _currentState.Exit();
-                    _currentState = _wallRunning;
-                    _currentState.Enter();
+                    Vector3 cameraForward = -_head.GlobalTransform.Basis.Z;
+                    Vector3 wallAlong = detected.Cross(Vector3.Up).Normalized();
+                    // Resolver ambigüedad de signo: orientar wallAlong hacia el hemisferio de la cámara
+                    if (cameraForward.Dot(wallAlong) < 0f) wallAlong = -wallAlong;
+                    float velocityAlongWall = new Vector3(Velocity.X, 0f, Velocity.Z).Dot(wallAlong);
+                    if (cameraForward.Dot(wallAlong) > Config.WallRunMinFovDot
+                        && velocityAlongWall >= Config.WallRunMinEntrySpeed)
+                    {
+                        _wallRunState.WallNormal = detected;
+                        _currentState.Exit();
+                        _currentState = _wallRunning;
+                        _currentState.Enter();
+                    }
                 }
             }
         }
@@ -285,6 +344,20 @@ public partial class Player : CharacterBody3D
                 }
             }
         }
+
+        // Intentar mantle (desde grounded o airborne, con velocidad suficiente, sin noclip)
+        if (!inputLocked && !_isNoclip &&
+            (_currentState == _grounded || _currentState == _airborne))
+        {
+            float hSpeed = new Vector2(Velocity.X, Velocity.Z).Length();
+            if (hSpeed >= Config.MantleMinEntrySpeed && TryDetectMantle(out Vector3 mantleTarget))
+            {
+                _mantleState.TargetPosition = mantleTarget;
+                _currentState.Exit();
+                _currentState = _mantling;
+                _currentState.Enter();
+            }
+        }
     }
 
     // Raycast lateral para detectar paredes válidas (casi verticales).
@@ -302,6 +375,57 @@ public partial class Player : CharacterBody3D
         }
         wallNormal = Vector3.Zero;
         return false;
+    }
+
+    // Detecta un ledge mantenable: dos raycasts (horizontal al obstáculo + vertical al borde superior).
+    private bool TryDetectMantle(out Vector3 mantleTarget)
+    {
+        mantleTarget = Vector3.Zero;
+
+        Vector3 forward = new Vector3(-Transform.Basis.Z.X, 0f, -Transform.Basis.Z.Z);
+        if (forward == Vector3.Zero) return false;
+        forward = forward.Normalized();
+
+        float halfHeight = _originalCapsuleHeight / 2f;
+        float feetY = GlobalPosition.Y - halfHeight;
+
+        var spaceState = GetWorld3D().DirectSpaceState;
+
+        // Ray 1: horizontal a media altura del rango vaulteable, detecta la cara del obstáculo
+        Vector3 from1 = new Vector3(GlobalPosition.X, feetY + Config.MantleMaxHeight * 0.5f, GlobalPosition.Z);
+        var q1 = PhysicsRayQueryParameters3D.Create(
+            from1, from1 + forward * Config.MantleDetectionDistance, CollisionMask);
+        q1.Exclude = new Godot.Collections.Array<Rid> { GetRid() };
+        var hit1 = spaceState.IntersectRay(q1);
+        if (hit1.Count == 0) return false;
+
+        Vector3 hitPos = hit1["position"].AsVector3();
+
+        // Ray 2: vertical hacia abajo desde encima del obstáculo, encuentra la superficie superior
+        float checkTop = feetY + Config.MantleMaxHeight + 0.5f;
+        Vector3 from2 = new Vector3(hitPos.X + forward.X * 0.15f, checkTop, hitPos.Z + forward.Z * 0.15f);
+        var q2 = PhysicsRayQueryParameters3D.Create(
+            from2, from2 + Vector3.Down * (Config.MantleMaxHeight + 1.0f), CollisionMask);
+        q2.Exclude = new Godot.Collections.Array<Rid> { GetRid() };
+        var hit2 = spaceState.IntersectRay(q2);
+        if (hit2.Count == 0) return false;
+
+        // Rechazar pendientes: el ledge debe ser una superficie casi horizontal
+        Vector3 ledgeNormal = hit2["normal"].AsVector3();
+        if (ledgeNormal.Y < 0.85f) return false;
+
+        float edgeY = hit2["position"].AsVector3().Y;
+        float edgeHeight = edgeY - feetY;
+
+        if (edgeHeight < Config.MantleMinHeight || edgeHeight > Config.MantleMaxHeight) return false;
+
+        // Posición objetivo: centro de cápsula sobre el borde, ligeramente adelante de la cara
+        mantleTarget = new Vector3(
+            hitPos.X + forward.X * 0.4f,
+            edgeY + halfHeight,
+            hitPos.Z + forward.Z * 0.4f
+        );
+        return true;
     }
 
     // Raycast hacia arriba para verificar si hay espacio suficiente para salir del slide

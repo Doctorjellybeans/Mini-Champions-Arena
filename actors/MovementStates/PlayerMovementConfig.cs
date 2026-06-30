@@ -31,4 +31,15 @@ public partial class PlayerMovementConfig : Resource
     public float WallRunCameraTilt;
     public float WallJumpHorizontalForce;
     public float WallJumpVerticalForce;
+    public float WallRunMinFovDot;
+    public float WallRunFriction;
+
+    public float DoubleJumpVelocity;
+
+    public float MantleDetectionDistance;
+    public float MantleMinHeight;
+    public float MantleMaxHeight;
+    public float MantleMinEntrySpeed;
+    public float MantleDuration;
+    public float MantleExitBoost;
 }
