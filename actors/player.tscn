@@ -8,7 +8,8 @@
 
 [node name="CharacterBody3D" type="CharacterBody3D" parent="."]
 script = ExtResource("Script_player")
-SlideEntryBoost = 4.0
+MantleMaxHeight = 0.9
+MantleMinEntrySpeed = 1.1
 
 [node name="CollisionShape3D" type="CollisionShape3D" parent="CharacterBody3D"]
 shape = SubResource("CapsuleShape3D_u8vuu")
