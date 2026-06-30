@@ -5,12 +5,25 @@ using Godot;
 // limitado por AirSpeedCap, sin tocar la velocidad horizontal preexistente (slide, sprint, etc).
 public class AirborneState : MovementState
 {
+    private bool _firstFrame;
+
     public AirborneState(Player player, PlayerMovementConfig config, float gravity)
         : base(player, config, gravity) { }
+
+    public override void Enter()
+    {
+        _firstFrame = true;
+    }
 
     public override void PhysicsUpdate(double delta, bool inputLocked)
     {
         Vector3 velocity = _player.Velocity;
+
+        if (!inputLocked && _player._doubleJumpAvailable && !_firstFrame && Input.IsActionJustPressed("jump"))
+        {
+            velocity.Y = _config.DoubleJumpVelocity;
+            _player._doubleJumpAvailable = false;
+        }
 
         velocity.Y -= _gravity * (float)delta;
 
@@ -41,5 +54,6 @@ public class AirborneState : MovementState
 
         _player.Velocity = velocity;
         _player.MoveAndSlide();
+        _firstFrame = false;
     }
 }
