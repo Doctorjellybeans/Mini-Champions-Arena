@@ -63,28 +63,14 @@ public class WallRunningState : MovementState
             if (wallAlong.Dot(new Vector3(velocity.X, 0f, velocity.Z)) < 0f)
                 wallAlong = -wallAlong;
 
-            Vector2 inputDir = Input.GetVector("move_left", "move_right", "move_forward", "move_back");
-
-            if (inputDir.Y < 0f)
-            {
-                // W: acelerar a WallRunSpeed a lo largo de la pared
-                float step = _config.WallRunSpeed * 8f * (float)delta;
-                velocity.X = Mathf.MoveToward(velocity.X, wallAlong.X * _config.WallRunSpeed, step);
-                velocity.Z = Mathf.MoveToward(velocity.Z, wallAlong.Z * _config.WallRunSpeed, step);
-            }
-            else if (inputDir.Y > 0f)
-            {
-                // S: frenar activamente
-                float step = _config.WallRunSpeed * 8f * (float)delta;
-                velocity.X = Mathf.MoveToward(velocity.X, 0f, step);
-                velocity.Z = Mathf.MoveToward(velocity.Z, 0f, step);
-            }
-            else
-            {
-                // Sin input: decaer suavemente conservando momentum
-                velocity.X *= 0.97f;
-                velocity.Z *= 0.97f;
-            }
+            // Movimiento automático: siempre converge a WallRunSpeed sin depender del input.
+            // Bajo el límite: acelera rápidamente. Sobre el límite: desacelera con WallRunFriction.
+            float speedAlongWall = new Vector3(velocity.X, 0f, velocity.Z).Dot(wallAlong);
+            float step = speedAlongWall > _config.WallRunSpeed
+                ? _config.WallRunFriction * (float)delta
+                : _config.WallRunSpeed * 8f * (float)delta;
+            velocity.X = Mathf.MoveToward(velocity.X, wallAlong.X * _config.WallRunSpeed, step);
+            velocity.Z = Mathf.MoveToward(velocity.Z, wallAlong.Z * _config.WallRunSpeed, step);
         }
 
         _player.Velocity = velocity;
