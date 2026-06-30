@@ -10,12 +10,14 @@ public class GroundedState : MovementState
     public override void Enter()
     {
         _player.LastWallNormal = Vector3.Zero;
+        _player._doubleJumpAvailable = true;
     }
 
     public override void PhysicsUpdate(double delta, bool inputLocked)
     {
         Vector3 velocity = _player.Velocity;
 
+        velocity.Y = 0f; // Evitar acumulación de velocidad vertical en el suelo
         if (!inputLocked && Input.IsActionJustPressed("jump"))
             velocity.Y = _config.JumpVelocity;
 
